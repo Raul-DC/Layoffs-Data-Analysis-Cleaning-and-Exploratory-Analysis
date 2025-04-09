@@ -1,5 +1,3 @@
----
-
 # 👞😭 Proyecto de Análisis de Despidos Globales 🔍
 
 *Donde comenzó la decadencia de los trabajos en TI...*
