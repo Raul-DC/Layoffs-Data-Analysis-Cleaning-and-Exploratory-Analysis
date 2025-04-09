@@ -10,7 +10,6 @@
 - [Data Cleaning Process](#data-cleaning-process)
 - [Exploratory Data Analysis (EDA)](#exploratory-data-analysis-eda)
 - [Conclusion & Recommendations](#conclusion--recommendations)
-- [Screenshot Guidelines](#screenshot-guidelines)
 
 ---
 
@@ -24,9 +23,9 @@ In this project, raw data regarding global layoffs is first processed through a 
 
 ---
 
-## Data Cleaning Process 🧹
+## Data Cleaning Process 
 
-This section summarizes the steps followed to clean and standardize the dataset:
+🧹 This section summarizes the steps followed to clean and standardize the dataset:
 
 1. **📦 Database & Table Setup:**  
    - Initialize MySQL Workbench and create a new schema (named `world_layoffs`).
@@ -95,7 +94,7 @@ WHERE row_num >1;
   	WHERE country LIKE 'United States%';
    ```
 
-   - Convert date strings into a proper date format using `STR_TO_DATE` and update the schema to switch the column type accordingly. ❗❗❗❗
+   - Convert date strings into a proper date format using `STR_TO_DATE` and update the schema to switch the column type accordingly.
 
    ```sql
    SELECT `date`,
@@ -192,9 +191,9 @@ WHERE row_num >1;
 
 ---
 
-## Exploratory Data Analysis (EDA) 🔎
+## Exploratory Data Analysis (EDA) 
 
-With the cleaned dataset in place, the next phase is to perform an exploratory analysis to extract actionable insights:
+🔎 With the cleaned dataset in place, the next phase is to perform an exploratory analysis to extract actionable insights:
 
 1. **👓 Initial Data Examination:**
 
@@ -206,46 +205,184 @@ With the cleaned dataset in place, the next phase is to perform an exploratory a
 
    - Use aggregate functions like `MAX()`, `MIN()` to understand the range of values in key fields such as `total_laid_off` and `percentage_laid_off`.
 
-   > **[Screenshot Tag]**: Capture the output of summary queries (e.g., maximum and minimum layoffs).
+   ```sql
+   SELECT MAX(total_laid_off), MAX(percentage_laid_off)
+   FROM layoffs_staging2;
+   ```
 
-3. **🏢 Analysis by Company:**  
+   ![image](https://github.com/user-attachments/assets/0f136a01-aa41-46e2-b8d7-cea9e4097e78)
+
+
+   ```sql
+   SELECT *
+   FROM layoffs_staging2
+   WHERE percentage_laid_off = 1
+   ORDER BY total_laid_off DESC;
+   ```
+
+  ![image](https://github.com/user-attachments/assets/f25dec4a-3ce4-454e-b658-e248c599c13b)
+ 
+   ```sql
+   SELECT *
+   FROM layoffs_staging2
+   WHERE percentage_laid_off = 1
+   ORDER BY funds_raised_millions DESC;
+   ```
+
+   ![image](https://github.com/user-attachments/assets/3ab03cda-081b-4f74-b7ea-7d2c5f59d324)
+
+
+2. **🏢 Analysis by Company:**  
+
    - Group data by company to compute the sum of layoffs.
-   - Rank companies based on the number of layoffs, highlighting leaders like Amazon, Google, etc.
+
+   ```sql
+   SELECT company, SUM(total_laid_off)
+   FROM layoffs_staging2
+   GROUP BY company
+   ORDER BY 2 DESC;
+   ```
+
+   ![image](https://github.com/user-attachments/assets/36e1323f-6189-4729-be00-55db90b8d1bd)
+
    - Identify companies that have experienced 100% workforce reduction.
+  
+   ```sql
+   SELECT company, percentage_laid_off, total_laid_off
+   FROM layoffs_staging2
+   WHERE percentage_laid_off = 1
+   ORDER BY total_laid_off DESC;
+   ```
 
-   > **[Screenshot Tag]**: Show the result of the grouping query by company with rankings.
+   ![image](https://github.com/user-attachments/assets/6fe3cf8d-e366-4fd4-aa22-dc27820babaf)
 
-4. **🏭 Industry Analysis:**  
+
+3. **🏭 Industry Analysis:**
+    
    - Aggregate layoffs by industry to pinpoint which sectors are most affected.
-   - Present visual cues (if using visualization tools later) to compare industries such as Technology, Retail, Finance, etc.
 
-   > **[Screenshot Tag]**: Display the grouped results by industry.
+   ```sql
+   SELECT industry, SUM(total_laid_off)
+   FROM layoffs_staging2
+   GROUP BY industry
+   ORDER BY 2 DESC;
+   ```
 
-5. **🌎 Country Analysis:**  
+   ![image](https://github.com/user-attachments/assets/be47dbc3-91e4-4382-8426-b25382688015)
+
+
+
+4. **🌎 Country Analysis:**
+   
    - Compute the total layoffs per country to see the global distribution.
-   - Highlight specific trends, such as the notable figures for the United States and other key nations.
+  
+   ```sql
+   SELECT country, SUM(total_laid_off)
+   FROM layoffs_staging2
+   GROUP BY country
+   ORDER BY 2 DESC;
+   ```
 
-   > **[Screenshot Tag]**: Display output of country-wise aggregation queries.
+   ![image](https://github.com/user-attachments/assets/e2460e9f-7d4e-4852-8faa-20e285e54304)
+   
 
-6. **📆 Temporal Analysis:**  
+5. **📆 Temporal Analysis:**
+     
    - Analyze the timeline of layoffs by extracting the year and month from date fields.
+  
+   ```sql
+   SELECT YEAR(`date`), SUM(total_laid_off)
+   FROM layoffs_staging2
+   WHERE YEAR(`date`) IS NOT NULL
+   GROUP BY YEAR(`date`)
+   ORDER BY 1 DESC;
+   ```
+
+   ![image](https://github.com/user-attachments/assets/f66fc7e8-ca90-4f33-8255-1b3b712dc5b9)
+
+
    - Use rolling totals to observe trends over months and identify the peak periods.
+
+   ```sql
+   WITH Rolling_Total AS
+   (
+   	SELECT SUBSTRING(`date`, 1, 7) AS `MONTH`, SUM(total_laid_off) AS total_off
+	FROM layoffs_staging2
+	WHERE SUBSTRING(`date`, 1, 7) IS NOT NULL
+	GROUP BY `MONTH`
+	ORDER BY 1 ASC
+   )
+   SELECT `MONTH`, total_off, SUM(total_off) OVER(ORDER BY `MONTH`) AS rolling_total 
+   FROM Rolling_Total;
+   ```
+
+   ![image](https://github.com/user-attachments/assets/937ade30-e290-490f-9cc7-4066f7370197)
+
+
    - Implement window functions like `SUM() OVER (ORDER BY month)` to calculate cumulative totals.
 
-   > **[Screenshot Tag]**: Capture a timeline chart (if available) or query result showing monthly totals and rolling sums.
+   ```sql
+   WITH Rolling_Total AS
+	(
+	SELECT SUBSTRING(`date`, 1, 7) AS `MONTH`, SUM(total_laid_off) AS total_off
+	FROM layoffs_staging2
+	WHERE SUBSTRING(`date`, 1, 7) IS NOT NULL
+	GROUP BY `MONTH`
+	ORDER BY 1 ASC
+	)
+   SELECT `MONTH`, total_off, SUM(total_off) OVER(ORDER BY `MONTH`) AS rolling_total 
+   FROM Rolling_Total;
+   ```
 
-7. **🛠️ Advanced Analysis:**  
+   ![image](https://github.com/user-attachments/assets/3e8d5b0b-d7af-458a-aa8b-4093b2a3ed9f)
+
+
+
+6. **🛠️ Advanced Analysis:**
+    
    - Leverage ranking functions like `DENSE_RANK()` to determine yearly leaders.
-   - Filter top companies per year to assess shifting trends over time.
-   - Compare trends between different time periods (e.g., 2020 vs. 2021 vs. 2022).
 
-   > **[Screenshot Tag]**: Screenshot of advanced ranking query results with top five companies per year.
+   ```sql
+   WITH Company_Year (company, years, total_laid_off) AS
+	(
+	SELECT company, YEAR(`date`), SUM(total_laid_off)
+	FROM layoffs_staging2
+	GROUP BY company, YEAR(`date`)
+	)
+   SELECT *, DENSE_RANK() OVER (PARTITION BY years ORDER BY total_laid_off DESC) AS Ranking
+   FROM Company_Year
+   WHERE years IS NOT NULL
+   ORDER BY Ranking ASC;
+   ```
+
+   ![image](https://github.com/user-attachments/assets/ee26e7ca-4450-4b42-8ee1-48cc467a2a03)
+
+   - Filter top companies per year to assess shifting trends over time.
+
+   ```sql
+   WITH Company_Year (company, years, total_laid_off) AS
+	(
+	SELECT company, YEAR(`date`), SUM(total_laid_off)
+	FROM layoffs_staging2
+	GROUP BY company, YEAR(`date`)
+	), Company_Year_Rank AS
+	(
+	SELECT *, DENSE_RANK() OVER (PARTITION BY years ORDER BY total_laid_off DESC) AS Ranking
+	FROM Company_Year
+	WHERE years IS NOT NULL
+	)
+   SELECT *
+   FROM Company_Year_Rank
+   WHERE Ranking <= 5;
+   ```
+
+   ![image](https://github.com/user-attachments/assets/3b07b606-1058-4e61-bb0e-5832209e726a)
 
 ---
 
-## Conclusion & Recommendations 📝
+## Conclusion & Recommendations 
 
-After completing the EDA, the project reveals vital insights such as:
+📝 After completing the EDA, the project reveals vital insights such as:
 - The fluctuation of layoffs over time and the identification of peak periods.
 - Which companies and industries bore the brunt of workforce reductions.
 - Geographic trends that may inform broader economic research.
@@ -255,28 +392,4 @@ Based on these insights, future steps could include:
 - Further segmentation (e.g., by company size or market sector).
 - In-depth statistical analysis or predictive modeling for proactive decision-making.
 
-> **[Screenshot Tag]**: Optionally, include a final summary dashboard or key insights overview captured from your analysis tool.
-
 ---
-
-## Screenshot Guidelines
-
-For clarity and visual support, here se sugieren etiquetas para las capturas de pantalla en cada sección:
-
-- **Introduction:**  
-  - *Screenshot of the raw dataset overview in MySQL Workbench.*  
-
-- **Data Cleaning Process:**  
-  - *Schema creation & data import screen.*  
-  - *Query output showing duplicate detection and the deletion process.*  
-  - *Before-and-after snapshots of data standardization (dates, text fields).*  
-  - *Final cleaned table display in the MySQL interface.*
-
-- **Exploratory Data Analysis (EDA):**  
-  - *Query results of descriptive statistics (max, min values).*  
-  - *Grouping and ranking results by company, industry, and country.*  
-  - *Temporal analysis outputs with monthly breakdowns and rolling totals.*  
-  - *Advanced ranking outputs (top five companies per year).*
-
-- **Conclusion & Recommendations:**  
-  - *Screenshot of an overview dashboard or key insights summary (si aplicable) que resuma las recomendaciones finales.*
